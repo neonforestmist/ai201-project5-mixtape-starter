@@ -134,6 +134,16 @@ I chose Issues #1, #4, and #5 for the first fix pass. I reproduced each one befo
 
 **Your fix and side-effect check:** I changed the cutoff to the start of the current UTC day with `now.replace(hour=0, minute=0, second=0, microsecond=0)`. I added `tests/test_feed.py`, which freezes the service clock and verifies that a previous-night event is excluded while a same-day event is returned. I checked the change by running `python -m pytest tests/test_feed.py`.
 
+### Issue #3: The Same Song Keeps Showing Up Twice In Search
+
+**How I reproduced it:** I used the seeded multi-tag song `Crown Heights Anthem`, which has three tag rows. Searching for `Anthem` goes through `GET /songs/search?q=Anthem` and `search_service.search_songs`. The data condition that triggers the report is a matching song with multiple rows in `song_tags`.
+
+**How I found the root cause:** I traced `GET /songs/search` from `routes/songs.py` to `search_service.search_songs`. The search filters only checked `Song.title` and `Song.artist`, but the query still performed an `outerjoin` to `song_tags`. That join made the database rowset contain one row per tag for the same matching song, which is exactly why multi-tag songs were the ones reported as duplicate results.
+
+**The root cause:** The search query joined against `song_tags` even though tag rows were not part of the search filter. For a song with three tags, the joined rowset had three matching rows for the same song id. The service should search songs as songs, then let `Song.to_dict()` serialize each song's tags through the model relationship.
+
+**Your fix and side-effect check:** I removed the unnecessary `song_tags` outer join and the unused tag imports from `search_service.py`. This keeps search cardinality at one row per matching song while still returning tag names in each result. I checked related search behavior by running `python -m pytest tests/test_search.py`, which covers matching title/artist searches, multi-tag songs appearing once, one-tag songs, no-tag songs, and no-match searches.
+
 ### Issue #4: Rating A Shared Song Does Not Create A Notification
 
 **How I reproduced it:** I used the seeded database users `aaliya` and `kenji`, created a controlled song shared by `aaliya`, then called `POST /songs/<song_id>/rate` as `kenji` with a score of `5`. The endpoint returned HTTP `201`, and the rating row was saved, but Aaliya's notification count stayed at `0`.

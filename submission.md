@@ -2,15 +2,15 @@
 
 ## AI Usage
 
-I used Codex during Milestone 1 to navigate the starter repo, summarize the responsibilities of the main files, trace route-to-service call chains, and compare the project brief with the local code. I verified the setup steps by running the app locally, sending a request to the Flask server, and running the baseline test suite myself instead of relying only on the AI summary.
+I used Codex as a helper during this project, mainly to support codebase navigation, debugging, documentation, and verification. I directed what to inspect or test, reviewed the code and explanations myself, and verified behavior by running the app, checking the database-backed results, and running the test suite.
 
-During Milestone 2, I used Codex to help build controlled reproduction steps for the chosen bugs. I verified the behavior by running the code against the seeded database and controlled service inputs before making any application code changes.
+For Milestone 1, Codex helped summarize the starter repo structure, identify the roles of the main files, and trace route-to-service call chains. I checked that summary against the actual files and verified the setup steps locally.
 
-During Milestone 3, I used Codex to help trace each reproduced symptom from route to service code, identify the exact failing condition, and run focused regression checks after each fix. I verified each proposed fix by reading the changed code and running the relevant tests.
+For Milestone 2, Codex helped me design controlled reproduction steps for the chosen bugs. I verified the behavior by running the code against the seeded database and controlled service inputs before making any application code changes.
 
-During Milestone 4, I used Codex to review the final branch history, confirm the root cause analysis entries include all required fields, rerun the full test suite, and create the git log screenshot artifact.
+For Milestone 3, Codex helped trace each reproduced symptom from route to service code and helped suggest focused regression checks. I still reviewed each proposed root cause and fix directly in the code, then confirmed the fixes by running the relevant tests.
 
-For the stretch features, I used Codex to identify the remaining unfixed issues, trace their service-level root causes, and add a new regression test for the feed date-boundary bug. I verified the search fix by checking the existing multi-tag search test and confirmed the final branch history shows five separate fix commits.
+For Milestone 4 and the stretch features, Codex helped review the final branch history, update the submission documentation, and create the git log screenshot artifact. I verified the final state by checking the commit history, reviewing all RCA entries, running the full test suite, and confirming the pushed branch matched the local branch.
 
 ## Milestone 1: Codebase Map
 

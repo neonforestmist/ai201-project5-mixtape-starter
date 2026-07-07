@@ -6,6 +6,8 @@ I used Codex during Milestone 1 to navigate the starter repo, summarize the resp
 
 During Milestone 2, I used Codex to help build controlled reproduction steps for the chosen bugs. I verified the behavior by running the code against the seeded database and controlled service inputs before making any application code changes.
 
+During Milestone 3, I used Codex to help trace each reproduced symptom from route to service code, identify the exact failing condition, and run focused regression checks after each fix. I verified each proposed fix by reading the changed code and running the relevant tests.
+
 ## Milestone 1: Codebase Map
 
 ### Setup Notes
@@ -107,3 +109,15 @@ I chose Issues #1, #4, and #5 for the first fix pass. I reproduced each one befo
 - I can trigger all three chosen bugs deliberately.
 - I know the inputs and data conditions that reproduce each chosen bug.
 - I have not changed application code yet.
+
+## Milestone 3: Root Cause Analysis Entries
+
+### Issue #1: My Listening Streak Keeps Resetting
+
+**How I reproduced it:** I isolated `update_listening_streak` with a controlled user and two consecutive UTC dates: Saturday, June 15, 2024 and Sunday, June 16, 2024. After the Saturday listen, the streak was `1`. After the Sunday listen, the expected streak was `2`, but the observed streak stayed at `1`.
+
+**How I found the root cause:** I traced the report from `POST /songs/<song_id>/listen` in `routes/songs.py` to `record_listening_event` and `update_listening_streak` in `services/streak_service.py`. The key moment was comparing the documented streak rule, "If the user listened yesterday: streak increments by 1," with the actual conditional that only incremented when `days_since_last == 1 and today.weekday() != 6`.
+
+**The root cause:** `datetime.weekday()` returns `6` on Sunday, and the streak code explicitly excluded Sundays from the consecutive-day increment branch. That meant a normal Saturday-to-Sunday listen had `days_since_last == 1`, but still fell into the reset branch and set the streak back to `1`.
+
+**Your fix and side-effect check:** I changed the consecutive-day condition to increment whenever `days_since_last == 1`, regardless of weekday. I checked the related streak behaviors by running `python -m pytest tests/test_streaks.py`, which covers first listen, same-day repeat listens, normal consecutive days, skipped days, and the Saturday-to-Sunday boundary.

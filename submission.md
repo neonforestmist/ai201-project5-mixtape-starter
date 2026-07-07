@@ -131,3 +131,13 @@ I chose Issues #1, #4, and #5 for the first fix pass. I reproduced each one befo
 **The root cause:** The rating flow had no notification side effect. It validated the score, loaded the song and rater, created or updated the `Rating`, committed the database transaction, and returned the rating. Because it never called `create_notification`, the song sharer never received a `song_rated` notification even though the rating itself was saved successfully.
 
 **Your fix and side-effect check:** I added a `create_notification` call after a successful rating when the rater is not the same user who shared the song. The notification type is `song_rated`, and the body names the rater, song, and score. I added `tests/test_notifications.py` to verify that rating another user's song creates a notification and rating your own shared song does not notify yourself. I checked the change by running `python -m pytest tests/test_notifications.py`.
+
+### Issue #5: The Last Song In A Playlist Never Shows Up
+
+**How I reproduced it:** I used the seeded `Friday Energy` playlist and compared the raw `playlist_entries` rows with the result from `get_playlist_songs`. The raw table had `7` entries, but the service returned `6` songs. After I inserted one more playlist entry, the raw count became `8`, the service returned `7`, the previously missing song appeared, and the newly added last song became hidden.
+
+**How I found the root cause:** I traced `GET /playlists/<playlist_id>/songs` from `routes/playlists.py` to `playlist_service.get_playlist_songs`. The SQLAlchemy query joined `Song` to `playlist_entries`, filtered by playlist id, and ordered by `playlist_entries.position`, which matched the expected data flow. The specific failure was in the final return statement, where the code serialized `songs[:-1]` instead of `songs`.
+
+**The root cause:** In Python, `songs[:-1]` returns every item except the last one. The playlist query was retrieving the complete ordered list, but the service dropped the newest/final song while building the response. That is why adding a new song made the old missing song appear while hiding the newly added final song.
+
+**Your fix and side-effect check:** I changed the return statement to serialize all queried songs. I checked related playlist behavior by running `python -m pytest tests/test_playlists.py`, which verifies that all songs are returned, that their order is preserved, and that an empty playlist still returns an empty list.

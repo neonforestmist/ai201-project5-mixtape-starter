@@ -124,6 +124,16 @@ I chose Issues #1, #4, and #5 for the first fix pass. I reproduced each one befo
 
 **Your fix and side-effect check:** I changed the consecutive-day condition to increment whenever `days_since_last == 1`, regardless of weekday. I checked the related streak behaviors by running `python -m pytest tests/test_streaks.py`, which covers first listen, same-day repeat listens, normal consecutive days, skipped days, and the Saturday-to-Sunday boundary.
 
+### Issue #2: Friends Listening Now Shows People From Yesterday
+
+**How I reproduced it:** I created a controlled feed case with a frozen current time of Sunday, June 16, 2024 at 9:00 AM UTC. One friend had a listening event at Saturday, June 15, 2024 at 11:00 PM UTC, and another friend had a listening event at Sunday, June 16, 2024 at 8:30 AM UTC. The previous-night listen was still inside a rolling 24-hour window, but it was not from the current calendar day.
+
+**How I found the root cause:** I traced `GET /feed/<user_id>/listening-now` from `routes/feed.py` to `feed_service.get_friends_listening_now`. The service used `datetime.now(timezone.utc) - timedelta(hours=24)` as its cutoff. That matched the reported symptom exactly: a previous-night listen remains visible until the same clock time the next day.
+
+**The root cause:** The feature description says "listening now" should show friends who listened today, but the service used a rolling 24-hour recency window. Around 9 AM, a listen from 11 PM the previous night is only 10 hours old, so it incorrectly passed the filter even though it happened on yesterday's calendar date.
+
+**Your fix and side-effect check:** I changed the cutoff to the start of the current UTC day with `now.replace(hour=0, minute=0, second=0, microsecond=0)`. I added `tests/test_feed.py`, which freezes the service clock and verifies that a previous-night event is excluded while a same-day event is returned. I checked the change by running `python -m pytest tests/test_feed.py`.
+
 ### Issue #4: Rating A Shared Song Does Not Create A Notification
 
 **How I reproduced it:** I used the seeded database users `aaliya` and `kenji`, created a controlled song shared by `aaliya`, then called `POST /songs/<song_id>/rate` as `kenji` with a score of `5`. The endpoint returned HTTP `201`, and the rating row was saved, but Aaliya's notification count stayed at `0`.

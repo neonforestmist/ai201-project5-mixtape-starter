@@ -10,6 +10,8 @@ During Milestone 3, I used Codex to help trace each reproduced symptom from rout
 
 During Milestone 4, I used Codex to review the final branch history, confirm the root cause analysis entries include all required fields, rerun the full test suite, and create the git log screenshot artifact.
 
+For the stretch features, I used Codex to identify the remaining unfixed issues, trace their service-level root causes, and add a new regression test for the feed date-boundary bug. I verified the search fix by checking the existing multi-tag search test and confirmed the final branch history shows five separate fix commits.
+
 ## Milestone 1: Codebase Map
 
 ### Setup Notes
@@ -166,11 +168,19 @@ I chose Issues #1, #4, and #5 for the first fix pass. I reproduced each one befo
 
 ## Milestone 4: Final Review
 
+### Stretch Features Completed
+
+- Fix a 4th bug: Issue #2 is fixed and documented with a complete RCA entry.
+- Fix all 5 bugs: Issues #1 through #5 are fixed and documented with complete RCA entries.
+- Regression test: `tests/test_notifications.py` verifies rating notifications, and `tests/test_feed.py` verifies that "Friends Listening Now" excludes previous-day listens. Both tests would fail against the buggy behavior they cover.
+
 ### Git Log Review
 
 The `bugfix/mixtape` branch has one separate `fix:` commit per fixed bug:
 
 ```text
+01e469c fix: avoid duplicate song search rows
+4e2f60f fix: limit listening now to today's listens
 a429cc7 fix: return every playlist song
 0377a16 fix: notify sharers when songs are rated
 70c2ae3 fix: preserve streaks across Sunday listens
@@ -180,7 +190,7 @@ Git log screenshot artifact: `git-log-oneline.png`
 
 ### RCA Review
 
-I reviewed the root cause analysis entries for Issues #1, #4, and #5. Each entry includes:
+I reviewed the root cause analysis entries for Issues #1, #2, #3, #4, and #5. Each entry includes:
 
 - Issue number and title
 - How I reproduced it
@@ -191,5 +201,5 @@ I reviewed the root cause analysis entries for Issues #1, #4, and #5. Each entry
 ### Final Validation
 
 - Ran `python -m pytest tests/`.
-- Result: `15 passed`.
+- Result: `16 passed`.
 - Branch URL for submission: `https://github.com/neonforestmist/ai201-project5-mixtape-starter/tree/bugfix/mixtape`

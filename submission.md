@@ -4,6 +4,8 @@
 
 I used Codex during Milestone 1 to navigate the starter repo, summarize the responsibilities of the main files, trace route-to-service call chains, and compare the project brief with the local code. I verified the setup steps by running the app locally, sending a request to the Flask server, and running the baseline test suite myself instead of relying only on the AI summary.
 
+During Milestone 2, I used Codex to help build controlled reproduction steps for the chosen bugs. I verified the behavior by running the code against the seeded database and controlled service inputs before making any application code changes.
+
 ## Milestone 1: Codebase Map
 
 ### Setup Notes
@@ -69,3 +71,39 @@ I used Codex during Milestone 1 to navigate the starter repo, summarize the resp
 - `models.py` is important context because several features depend on association tables instead of direct model relationships.
 - The seed data intentionally creates conditions that make the reported issues reproducible.
 - The tests are useful as focused regression checks, but the project brief still needs to be used for full reproduction and root cause analysis wording.
+
+## Milestone 2: Bug Reproduction Notes
+
+I chose Issues #1, #4, and #5 for the first fix pass. I reproduced each one before changing application code.
+
+### Issue #1: My Listening Streak Keeps Resetting
+
+**How I reproduced it:** I isolated `update_listening_streak` with a controlled user and two consecutive UTC dates: Saturday, June 15, 2024 and Sunday, June 16, 2024. After the Saturday listen, the user's streak was `1`. After the Sunday listen, the expected streak was `2`, but the observed streak stayed at `1`.
+
+**Inputs and condition that triggered it:** A user with no previous listening history, followed by listens on consecutive Saturday and Sunday dates.
+
+**Observed result:** Saturday listen -> streak `1`; Sunday listen -> expected `2`, observed `1`.
+
+### Issue #4: Rating A Shared Song Does Not Create A Notification
+
+**How I reproduced it:** I used the seeded database users `aaliya` and `kenji`, created a controlled song shared by `aaliya`, then called `POST /songs/<song_id>/rate` as `kenji` with a score of `5`. The endpoint returned HTTP `201`, and the rating was saved.
+
+**Inputs and condition that triggered it:** A song where `shared_by` is Aaliya's user id, rated by a different user, Kenji.
+
+**Observed result:** Aaliya had `0` notifications before the rating and still had `0` notifications afterward. There were also `0` notifications with type `song_rated`, even though the rating row existed with score `5`.
+
+### Issue #5: The Last Song In A Playlist Never Shows Up
+
+**How I reproduced it:** I used the seeded `Friday Energy` playlist and compared the raw `playlist_entries` rows with the songs returned by `get_playlist_songs`.
+
+**Inputs and condition that triggered it:** A playlist with ordered `playlist_entries`.
+
+**Observed result:** The raw table had `7` playlist entries, but the service returned `6` songs. The raw newest song was `Harlem Renaissance`, but the returned list ended at `Crown Heights Anthem`.
+
+**Follow-up reproduction:** I inserted one additional playlist entry to simulate a new song being added. The raw table then had `8` playlist entries, but the service returned `7` songs. The previous missing song, `Harlem Renaissance`, appeared, and the newly added last song, `Midnight Drive`, became hidden.
+
+### Milestone 2 Checkpoint
+
+- I can trigger all three chosen bugs deliberately.
+- I know the inputs and data conditions that reproduce each chosen bug.
+- I have not changed application code yet.

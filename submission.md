@@ -121,3 +121,13 @@ I chose Issues #1, #4, and #5 for the first fix pass. I reproduced each one befo
 **The root cause:** `datetime.weekday()` returns `6` on Sunday, and the streak code explicitly excluded Sundays from the consecutive-day increment branch. That meant a normal Saturday-to-Sunday listen had `days_since_last == 1`, but still fell into the reset branch and set the streak back to `1`.
 
 **Your fix and side-effect check:** I changed the consecutive-day condition to increment whenever `days_since_last == 1`, regardless of weekday. I checked the related streak behaviors by running `python -m pytest tests/test_streaks.py`, which covers first listen, same-day repeat listens, normal consecutive days, skipped days, and the Saturday-to-Sunday boundary.
+
+### Issue #4: Rating A Shared Song Does Not Create A Notification
+
+**How I reproduced it:** I used the seeded database users `aaliya` and `kenji`, created a controlled song shared by `aaliya`, then called `POST /songs/<song_id>/rate` as `kenji` with a score of `5`. The endpoint returned HTTP `201`, and the rating row was saved, but Aaliya's notification count stayed at `0`.
+
+**How I found the root cause:** I traced `POST /songs/<song_id>/rate` from `routes/songs.py` to `notification_service.rate_song`. Then I compared that function with `notification_service.add_to_playlist`, the working path mentioned in the bug report. `add_to_playlist` saves the interaction and then calls `create_notification` for the original song sharer. `rate_song` saved the `Rating` and returned immediately without any equivalent notification call.
+
+**The root cause:** The rating flow had no notification side effect. It validated the score, loaded the song and rater, created or updated the `Rating`, committed the database transaction, and returned the rating. Because it never called `create_notification`, the song sharer never received a `song_rated` notification even though the rating itself was saved successfully.
+
+**Your fix and side-effect check:** I added a `create_notification` call after a successful rating when the rater is not the same user who shared the song. The notification type is `song_rated`, and the body names the rater, song, and score. I added `tests/test_notifications.py` to verify that rating another user's song creates a notification and rating your own shared song does not notify yourself. I checked the change by running `python -m pytest tests/test_notifications.py`.
